@@ -4,22 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WAEC Practice Test</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
     h1 { text-align: center; }
     .subject-select, .quiz, .result { margin-bottom: 20px; }
     .question { margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
     .options label { display: block; margin: 5px 0; }
-    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; cursor: pointer; }
+    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
     .correct { color: green; font-weight: bold; }
     .wrong { color: red; font-weight: bold; }
+    .timer { position: fixed; top: 20px; right: 20px; background: #fff; padding: 15px 25px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.2); font-size: 24px; font-weight: bold; z-index: 1000; }
+    .timer.warning { background: #ff9800; color: white; }
+    .timer.danger { background: #f44336; color: white; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .email-setup { background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107; }
+    .email-setup input { padding: 8px; margin: 5px 0; width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 4px; }
+    .hidden { display: none; }
+    .loading { text-align: center; padding: 20px; }
+    .loading::after { content: '...'; animation: dots 1.5s steps(4, end) infinite; }
+    @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
 </style>
 </head>
 <body>
 
 <h1>WAEC Practice Test</h1>
 
-<div class="subject-select">
+<div class="email-setup" id="emailSetup">
+    <h3>📧 Email Setup</h3>
+    <p>Enter your email to receive test results:</p>
+    <input type="email" id="userEmail" placeholder="your.email@example.com" required>
+    <br>
+    <button onclick="saveEmailConfig()">Save Email & Start</button>
+</div>
+
+<div class="subject-select" id="subjectSelect">
     <h2>Select Subjects to Practice</h2>
     <form id="subjectForm">
         <label><input type="checkbox" name="subject" value="Math"> Math</label>
@@ -32,15 +53,15 @@
         <label><input type="checkbox" name="subject" value="Biology"> Biology</label>
         <label><input type="checkbox" name="subject" value="Literature"> Literature</label>
         <br>
-        <button type="submit">Start Quiz</button>
+        <button type="submit">Start Quiz (10 Minutes)</button>
     </form>
 </div>
 
+<div id="timerDisplay" class="timer hidden">10:00</div>
 <div id="quiz" class="quiz"></div>
 <div id="results" class="result"></div>
 
 <script>
-// Full WAEC-style question pool per subject (demo with 5-15 questions each)
 const subjects = {
     Math: [
          { q: "What is the value of 2 + 3?", options: ["4", "5", "6", "7"], answer: "5" },
@@ -92,90 +113,11 @@ const subjects = {
     { q: "What is the perimeter of a rectangle with length 8 cm and width 5 cm?", options: ["26 cm", "24 cm", "20 cm", "18 cm"], answer: "26 cm" },
     ],
     English: [
-{ q: "Choose the correct spelling:", options: ["Accomodate","Accommodate","Acomodate","Acommodate"], answer: "Accommodate" },
-    { q: "Synonym of 'happy'?", options: ["Sad","Joyful","Angry","Tired"], answer: "Joyful" },
-    { q: "Antonym of 'love'?", options: ["Hate","Care","Like","Adore"], answer: "Hate" },
-    { q: "Select the correct verb: He ___ to school.", options: ["go","goes","gone","going"], answer: "goes" },
-    { q: "Plural of 'child'?", options: ["childs","children","childes","child"], answer: "children" },
-    { q: "Choose the correct preposition: She is good ___ math.", options: ["at","in","on","for"], answer: "at" },
-    { q: "Identify the adjective: The quick brown fox jumps over the lazy dog.", options: ["fox","quick","jumps","over"], answer: "quick" },
-    { q: "Which is a conjunction?", options: ["but","run","quick","happiness"], answer: "but" },
-    { q: "Choose the correct tense: I ___ to the market yesterday.", options: ["go","went","gone","going"], answer: "went" },
-    { q: "Synonym of 'intelligent'?", options: ["Smart","Dull","Lazy","Angry"], answer: "Smart" },
-    { q: "Antonym of 'generous'?", options: ["Selfish","Kind","Helpful","Caring"], answer: "Selfish" },
-    { q: "Select the correct article: She bought ___ apple.", options: ["a","an","the","no article"], answer: "an" },
-    { q: "Identify the noun: The teacher teaches students.", options: ["teacher","teaches","students","the"], answer: "teacher" },
-    { q: "Choose the correct form: He is taller than ___.", options: ["I","me","my","mine"], answer: "me" },
-    { q: "Pick the correct spelling:", options: ["Occasion","Ocasion","Ocasian","Ocassion"], answer: "Occasion" },
-    { q: "Select the correct tense: They ___ football every Sunday.", options: ["play","played","playing","plays"], answer: "play" },
-    { q: "Synonym of 'brave'?", options: ["Cowardly","Courageous","Fearful","Shy"], answer: "Courageous" },
-    { q: "Antonym of 'difficult'?", options: ["Easy","Hard","Tough","Complex"], answer: "Easy" },
-    { q: "Choose the correct preposition: She is fond ___ reading.", options: ["of","in","for","at"], answer: "of" },
-    { q: "Identify the pronoun: He gave me a book.", options: ["He","gave","me","book"], answer: "He" },
-    { q: "Select the correct form: She has ___ homework.", options: ["many","much","few","little"], answer: "much" },
-    { q: "Pick the correct tense: I ___ my homework before dinner.", options: ["finish","finished","finishing","finishes"], answer: "finished" },
-    { q: "Synonym of 'quick'?", options: ["Fast","Slow","Late","Late"], answer: "Fast" },
-    { q: "Antonym of 'rich'?", options: ["Poor","Wealthy","Happy","Successful"], answer: "Poor" },
-    { q: "Choose the correct article: He is ___ honest man.", options: ["a","an","the","no article"], answer: "an" },
-    { q: "Identify the adverb: She runs quickly.", options: ["runs","quickly","she","none"], answer: "quickly" },
-    { q: "Select the correct tense: They ___ going to school now.", options: ["is","are","was","were"], answer: "are" },
-    { q: "Synonym of 'angry'?", options: ["Mad","Calm","Happy","Joyful"], answer: "Mad" },
-    { q: "Antonym of 'strong'?", options: ["Weak","Powerful","Hard","Tough"], answer: "Weak" },
-    { q: "Choose the correct conjunction: I want tea ___ coffee.", options: ["and","but","or","so"], answer: "or" },
-    { q: "Identify the verb: She sings beautifully.", options: ["She","sings","beautifully","none"], answer: "sings" },
-    { q: "Pick the correct pronoun: This gift is for ___", options: ["I","me","my","mine"], answer: "me" },
-    { q: "Select the correct tense: He ___ finished his work.", options: ["has","have","had","having"], answer: "has" },
-    { q: "Synonym of 'happy'?", options: ["Joyful","Sad","Angry","Tired"], answer: "Joyful" },
-    { q: "Antonym of 'early'?", options: ["Late","Soon","Quick","Fast"], answer: "Late" },
-    { q: "Choose the correct preposition: He is afraid ___ dogs.", options: ["of","at","for","in"], answer: "of" },
-    { q: "Identify the noun: The cat sleeps on the mat.", options: ["cat","sleeps","on","the"], answer: "cat" },
-    { q: "Select the correct form: She has ___ books.", options: ["many","much","few","little"], answer: "many" },
-    { q: "Pick the correct article: I saw ___ eagle.", options: ["a","an","the","no article"], answer: "an" },
-    { q: "Choose the correct verb: He ___ to the market every day.", options: ["go","goes","going","gone"], answer: "goes" },
-    { q: "Synonym of 'sad'?", options: ["Unhappy","Joyful","Excited","Happy"], answer: "Unhappy" },
-    { q: "Antonym of 'cold'?", options: ["Hot","Cool","Freezing","Chilly"], answer: "Hot" },
-    { q: "Select the correct conjunction: She is tired ___ she continues working.", options: ["but","and","or","so"], answer: "but" },
-    { q: "Identify the adjective: He has a beautiful house.", options: ["beautiful","house","He","has"], answer: "beautiful" },
-    { q: "Pick the correct preposition: He is interested ___ music.", options: ["in","on","at","for"], answer: "in" },
-    { q: "Choose the correct tense: I ___ seen that movie.", options: ["have","has","had","having"], answer: "have" },
-    { q: "Synonym of 'difficult'?", options: ["Hard","Easy","Simple","Light"], answer: "Hard" },
-    { q: "Antonym of 'young'?", options: ["Old","New","Fresh","Youthful"], answer: "Old" },
-    { q: "Choose the correct article: He is ___ best player.", options: ["a","an","the","no article"], answer: "the" },
-    { q: "Identify the pronoun: They went to the park.", options: ["They","went","park","to"], answer: "They" },
-    { q: "Select the correct form: She is taller than ___", options: ["me","I","mine","my"], answer: "me" },
-    { q: "Pick the correct spelling:", options: ["Receive","Recieve","Receeve","Recive"], answer: "Receive" },
-    { q: "Choose the correct verb: He ___ finished his work.", options: ["has","have","had","having"], answer: "has" },
-    { q: "Synonym of 'quiet'?", options: ["Silent","Loud","Noisy","Clamorous"], answer: "Silent" },
-    { q: "Antonym of 'fast'?", options: ["Slow","Quick","Rapid","Swift"], answer: "Slow" },
-    { q: "Select the correct preposition: She is good ___ English.", options: ["at","in","on","for"], answer: "at" },
-    { q: "Identify the noun: The sun rises in the east.", options: ["sun","rises","east","in"], answer: "sun" },
-    { q: "Choose the correct article: I have ___ orange.", options: ["a","an","the","no article"], answer: "an" },
-    { q: "Pick the correct verb: They ___ going to school.", options: ["are","is","was","were"], answer: "are" },
-    { q: "Synonym of 'angry'?", options: ["Furious","Happy","Calm","Joyful"], answer: "Furious" },
-    { q: "Antonym of 'happy'?", options: ["Sad","Joyful","Excited","Glad"], answer: "Sad" },
-    { q: "Select the correct conjunction: I wanted to go ___ it was raining.", options: ["but","and","or","so"], answer: "but" },
-    { q: "Identify the adjective: He bought a new car.", options: ["new","car","He","bought"], answer: "new" },
-    { q: "Choose the correct tense: She ___ playing tennis.", options: ["is","are","was","were"], answer: "is" },
-    { q: "Pick the correct pronoun: The teacher gave us a task, and ___ completed it.", options: ["we","us","our","ours"], answer: "we" },
-    { q: "Synonym of 'beautiful'?", options: ["Pretty","Ugly","Bad","Poor"], answer: "Pretty" },
-    { q: "Antonym of 'easy'?", options: ["Difficult","Simple","Light","Smooth"], answer: "Difficult" },
-    { q: "Select the correct article: He bought ___ umbrella.", options: ["a","an","the","no article"], answer: "an" },
-    { q: "Identify the noun: The birds are singing.", options: ["birds","singing","are","The"], answer: "birds" },
-    { q: "Choose the correct verb: I ___ my homework yesterday.", options: ["did","do","done","doing"], answer: "did" },
-    { q: "Synonym of 'fast'?", options: ["Quick","Slow","Late","Tardy"], answer: "Quick" },
-    { q: "Antonym of 'strong'?", options: ["Weak","Powerful","Firm","Hard"], answer: "Weak" },
-    { q: "Select the correct preposition: He apologized ___ being late.", options: ["for","at","in","on"], answer: "for" },
-    { q: "Pick the correct spelling:", options: ["Separate","Seperate","Seperete","Seperat"], answer: "Separate" },
-    { q: "Choose the correct conjunction: I will go ___ you stay.", options: ["or","and","but","so"], answer: "or" },
-    { q: "Identify the adjective: She has long hair.", options: ["long","hair","She","has"], answer: "long" },
-    { q: "Select the correct tense: They ___ been to Lagos.", options: ["have","has","had","having"], answer: "have" },
-    { q: "Synonym of 'small'?", options: ["Tiny","Large","Huge","Big"], answer: "Tiny" },
-    { q: "Antonym of 'dark'?", options: ["Light","Black","Dim","Shadow"], answer: "Light" },
-    { q: "Choose the correct article: This is ___ book I was talking about.", options: ["the","a","an","no article"], answer: "the" },
-    { q: "Identify the noun: He plays football.", options: ["football","He","plays","none"], answer: "football" },
-    { q: "Pick the correct verb: She ___ very happy.", options: ["is","are","was","were"], answer: "is" },
-    { q: "Synonym of 'angry'?", options: ["Mad","Calm","Joyful","Glad"], answer: "Mad" },
-    { q: "Antonym of 'rich'?", options: ["Poor","Wealthy","Successful","Prosperous"], answer: "Poor" }
+        { q: "Choose correct spelling:", options: ["Accomodate","Accommodate","Acomodate","Acommodate"], answer: "Accommodate" },
+        { q: "Synonym of 'happy'?", options: ["Sad","Joyful","Angry","Tired"], answer: "Joyful" },
+        { q: "Antonym of 'love'?", options: ["Hate","Care","Like","Adore"], answer: "Hate" },
+        { q: "Select the correct verb: He ___ to school.", options: ["go","goes","gone","going"], answer: "goes" },
+        { q: "Plural of 'child'?", options: ["childs","children","childes","child"], answer: "children" }
     ],
     Yoruba: [
         { q: "What is 'Water' in Yoruba?", options: ["Omi","Ile","Ojo","Eja"], answer: "Omi" },
@@ -485,36 +427,208 @@ const subjects = {
     Literature: [
         { q: "Author of 'Things Fall Apart'?", options: ["Chinua Achebe","Wole Soyinka","Ngugi Wa Thiong'o","Chimamanda Adichie"], answer: "Chinua Achebe" },
         { q: "Author of 'No Longer at Ease'?", options: ["Chinua Achebe","Wole Soyinka","Ngugi Wa Thiong'o","Chimamanda Adichie"], answer: "Chinua Achebe" },
-        { q: "Author of 'Death and the King’s Horseman'?", options: ["Wole Soyinka","Chinua Achebe","Ngugi Wa Thiong'o","Chimamanda Adichie"], answer: "Wole Soyinka" },
+        { q: "Author of 'Death and the King's Horseman'?", options: ["Wole Soyinka","Chinua Achebe","Ngugi Wa Thiong'o","Chimamanda Adichie"], answer: "Wole Soyinka" },
         { q: "Author of 'A Grain of Wheat'?", options: ["Ngugi Wa Thiong'o","Chinua Achebe","Wole Soyinka","Chimamanda Adichie"], answer: "Ngugi Wa Thiong'o" },
         { q: "Protagonist in 'Things Fall Apart'?", options: ["Okonkwo","Obierika","Nwoye","Ikemefuna"], answer: "Okonkwo" }
     ]
 };
 
-// Utility: shuffle array
+let timerInterval;
+let timeRemaining = 600; // 10 minutes in seconds
+let quizQuestions = [];
+let selectedSubjects = [];
+let startTime;
+let emailConfig = {
+    publicKey: 'Yz16g8qPG_-f9ArRT',
+    serviceId: 'service_bt2q0z7',
+    templateId: 'template_l38ppck'
+};
+
+// Initialize EmailJS with public key
+emailjs.init('Yz16g8qPG_-f9ArRT');
+
 function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
 }
 
-// Form submit: generate quiz
-document.getElementById('subjectForm').addEventListener('submit', function(e){
+function saveEmailConfig() {
+    const email = document.getElementById('userEmail').value;
+
+    if (!email) {
+        alert('Please enter your email address!');
+        return;
+    }
+
+    if (!email.includes('@')) {
+        alert('Please enter a valid email address!');
+        return;
+    }
+
+    emailConfig.email = email;
+    
+    document.getElementById('emailSetup').style.display = 'none';
+    alert('Email saved! You can now start the quiz.');
+}
+
+function startTimer() {
+    const timerDisplay = document.getElementById('timerDisplay');
+    timerDisplay.classList.remove('hidden');
+    
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+        
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeRemaining <= 120) {
+            timerDisplay.classList.add('warning');
+        }
+        if (timeRemaining <= 60) {
+            timerDisplay.classList.remove('warning');
+            timerDisplay.classList.add('danger');
+        }
+        
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            autoSubmit();
+        }
+    }, 1000);
+}
+
+function autoSubmit() {
+    alert('⏰ Time is up! Your test is being submitted automatically.');
+    submitAnswers(true);
+}
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function sendEmail(resultsData, isAutoSubmit) {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading';
+    loadingDiv.textContent = 'Sending results to your email';
+    document.getElementById('results').prepend(loadingDiv);
+
+    const templateParams = {
+        user_email: emailConfig.email,
+        subject_taken: resultsData.subjects,
+        score: resultsData.score,
+        total_questions: resultsData.total,
+        correct_answers: resultsData.correctList,
+        wrong_answers: resultsData.wrongList,
+        unanswered: resultsData.unansweredList,
+        time_taken: resultsData.timeTaken,
+        submission_type: isAutoSubmit ? 'Auto-submitted (Time Elapsed)' : 'Manual Submission'
+    };
+
+    emailjs.send(emailConfig.serviceId, emailConfig.templateId, templateParams)
+        .then(() => {
+            loadingDiv.remove();
+            alert('✅ Results sent successfully to ' + emailConfig.email);
+        })
+        .catch((error) => {
+            loadingDiv.remove();
+            alert('❌ Failed to send email. Error: ' + error.text);
+            console.error('EmailJS error:', error);
+        });
+}
+
+function submitAnswers(isAutoSubmit = false) {
+    clearInterval(timerInterval);
+    
+    const timeTaken = 600 - timeRemaining;
+    let score = 0;
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+    
+    const correctAnswers = [];
+    const wrongAnswers = [];
+    const unanswered = [];
+    
+    quizQuestions.forEach((q, idx) => {
+        const selected = document.querySelector(`input[name="q${idx}"]:checked`);
+        
+        if (!selected) {
+            unanswered.push(`Q${idx + 1}: ${q.q} (Correct answer: ${q.answer})`);
+        } else if (selected.value === q.answer) {
+            score++;
+            correctAnswers.push(`Q${idx + 1}: ${q.q}`);
+        } else {
+            wrongAnswers.push(`Q${idx + 1}: ${q.q} (Your answer: ${selected.value}, Correct answer: ${q.answer})`);
+        }
+    });
+
+    // Display results
+    resultsDiv.innerHTML = `
+        <h2>${isAutoSubmit ? '⏰ Time Elapsed - Auto Submitted!' : '✅ Test Submitted Successfully!'}</h2>
+        <h3>Your Score: ${score} / ${quizQuestions.length}</h3>
+        <p><strong>Time Taken:</strong> ${formatTime(timeTaken)} ${isAutoSubmit ? '(Full 10 minutes)' : ''}</p>
+        <p><strong>Subject(s):</strong> ${selectedSubjects.join(', ')}</p>
+    `;
+
+    quizQuestions.forEach((q, idx) => {
+        const selected = document.querySelector(`input[name="q${idx}"]:checked`);
+        let status;
+        if (!selected) {
+            status = '<span class="wrong">Not Answered</span> (Correct: ' + q.answer + ')';
+        } else if (selected.value === q.answer) {
+            status = '<span class="correct">✓ Correct</span>';
+        } else {
+            status = `<span class="wrong">✗ Wrong</span> (Your answer: ${selected.value}, Correct: ${q.answer})`;
+        }
+        
+        const resultLine = document.createElement('div');
+        resultLine.innerHTML = `Q${idx + 1}: ${q.q} - ${status}`;
+        resultsDiv.appendChild(resultLine);
+    });
+
+    // Prepare email data
+    const resultsData = {
+        subjects: selectedSubjects.join(', '),
+        score: score,
+        total: quizQuestions.length,
+        correctList: correctAnswers.length > 0 ? correctAnswers.join('\n') : 'None',
+        wrongList: wrongAnswers.length > 0 ? wrongAnswers.join('\n') : 'None',
+        unansweredList: unanswered.length > 0 ? unanswered.join('\n') : 'None',
+        timeTaken: formatTime(timeTaken)
+    };
+
+    sendEmail(resultsData, isAutoSubmit);
+
+    // Disable all inputs
+    document.querySelectorAll('input[type="radio"]').forEach(input => input.disabled = true);
+    document.querySelector('#quiz button').disabled = true;
+}
+
+document.getElementById('subjectForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    
+    if (!emailConfig.email) {
+        alert('Please configure your email first!');
+        return;
+    }
+    
     const checkedSubjects = Array.from(document.querySelectorAll('input[name="subject"]:checked')).map(el => el.value);
-    if(checkedSubjects.length === 0){
+    if (checkedSubjects.length === 0) {
         alert("Please select at least one subject.");
         return;
     }
 
-    // Collect selected questions
+    selectedSubjects = checkedSubjects;
     let selectedPool = [];
     checkedSubjects.forEach(sub => { selectedPool = selectedPool.concat(subjects[sub]); });
-
-    const quizQuestions = shuffle(selectedPool).slice(0, 20);
+    quizQuestions = shuffle(selectedPool).slice(0, 30);
 
     const quizDiv = document.getElementById('quiz');
     const resultsDiv = document.getElementById('results');
     quizDiv.innerHTML = '';
     resultsDiv.innerHTML = '';
+
+    document.getElementById('subjectSelect').style.display = 'none';
 
     quizQuestions.forEach((q, idx) => {
         const questionDiv = document.createElement('div');
@@ -534,24 +648,13 @@ document.getElementById('subjectForm').addEventListener('submit', function(e){
         quizDiv.appendChild(questionDiv);
     });
 
-    // Add submit button
     const submitBtn = document.createElement('button');
     submitBtn.textContent = "Submit Answers";
-    submitBtn.addEventListener('click', () => {
-        let score = 0;
-        resultsDiv.innerHTML = '';
-        quizQuestions.forEach((q, idx) => {
-            const selected = document.querySelector(`input[name="q${idx}"]:checked`);
-            const isCorrect = selected && selected.value === q.answer;
-            if(isCorrect) score++;
-            const resultLine = document.createElement('div');
-            resultLine.innerHTML = `Q${idx + 1}: ${isCorrect ? '<span class="correct">Correct</span>' : `<span class="wrong">Wrong</span> (Correct: ${q.answer})`}`;
-            resultsDiv.appendChild(resultLine);
-        });
-        resultsDiv.innerHTML = `<h2>Your Score: ${score} / ${quizQuestions.length}</h2>` + resultsDiv.innerHTML;
-    });
-
+    submitBtn.addEventListener('click', () => submitAnswers(false));
     quizDiv.appendChild(submitBtn);
+
+    startTime = Date.now();
+    startTimer();
 });
 </script>
 
