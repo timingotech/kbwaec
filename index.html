@@ -45,6 +45,9 @@
     /* Fullscreen Button */
     .fullscreen-btn { position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 10px 20px; border-radius: 50px; cursor: pointer; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
     .fullscreen-btn:hover { background: #218838; }
+    
+    /* Session Code Badge */
+    .session-code-badge { position: fixed; top: 70px; left: 20px; background: #007bff; color: white; padding: 10px 15px; border-radius: 8px; font-size: 14px; z-index: 1000; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -72,6 +75,7 @@
             <li>✓ Right-click disabled</li>
             <li>✓ Fullscreen mode recommended</li>
             <li>✓ Activity monitoring enabled</li>
+            <li>✓ Unique session code tracking</li>
         </ul>
     </div>
     
@@ -84,6 +88,7 @@
         <li>Timer cannot be paused once started</li>
         <li>Review your answers before final submission</li>
         <li>Fullscreen mode is highly recommended for better focus</li>
+        <li>You will receive a unique session code when you start the test</li>
     </ul>
     
     <div class="warning">
@@ -125,6 +130,7 @@
     </form>
 </div>
 
+<div id="sessionCodeBadge" class="session-code-badge hidden"></div>
 <div id="timerDisplay" class="timer hidden">10:00</div>
 <div id="violationBadge" class="violation-badge hidden">⚠️ Violations: 0</div>
 <div id="fullscreenBtn" class="fullscreen-btn hidden" onclick="enterFullscreen()">🖥️ Fullscreen</div>
@@ -480,7 +486,6 @@ const subjects = {
   { q: "What is deregulation?", options: ["More government control", "Removal of government regulations", "New regulations", "International regulation"], answer: "Removal of government regulations" },
   { q: "What is austerity measure?", options: ["Increased spending", "Reduction in government spending", "Economic boom", "Tax reduction"], answer: "Reduction in government spending" }
 ],
-
     Computer: [
         { q: "HTML stands for?", options: ["Hyper Text Markup Language","High Text Machine Language","Hyperlink Markup Language","Home Tool Markup Language"], answer: "Hyper Text Markup Language" },
         { q: "CPU stands for?", options: ["Central Processing Unit","Central Print Unit","Computer Processing Unit","Central Program Unit"], answer: "Central Processing Unit" },
@@ -512,6 +517,7 @@ let startTime;
 let violations = 0;
 let tabSwitches = 0;
 let testActive = false;
+let sessionCode = '';
 
 const emailConfig = {
     publicKey: 'Yz16g8qPG_-f9ArRT',
@@ -522,6 +528,13 @@ const emailConfig = {
 };
 
 emailjs.init(emailConfig.publicKey);
+
+// Generate unique session code
+function generateSessionCode() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 7);
+    return `WAEC-${timestamp}-${random}`.toUpperCase();
+}
 
 // Security: Prevent right-click
 document.addEventListener('contextmenu', e => {
@@ -556,7 +569,7 @@ document.addEventListener('visibilitychange', () => {
         logViolation('tab-switch');
         showSecurityWarning(`⚠️ Warning: Tab switching detected! (${tabSwitches} time${tabSwitches > 1 ? 's' : ''})`);
         
-        if (tabSwitches >= 5) {
+        if (tabSwitches >= 2) {
             alert('Too many tab switches detected. Test will be submitted automatically.');
             autoSubmit();
         }
@@ -654,6 +667,41 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+function sendTestStartEmail() {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading';
+    loadingDiv.id = 'startEmailLoading';
+    loadingDiv.textContent = 'Notifying test start';
+    document.getElementById('quiz').prepend(loadingDiv);
+
+    const templateParams = {
+        user_name: emailConfig.name,
+        user_email: emailConfig.email,
+        subject_taken: selectedSubjects.join(', '),
+        score: `Test Started - Session Code: ${sessionCode}`,
+        total_questions: quizQuestions.length,
+        correct_answers: 'Test in progress...',
+        wrong_answers: 'Test in progress...',
+        unanswered: 'Test in progress...',
+        time_taken: '00:00 (Just Started)',
+        submission_type: 'TEST STARTED',
+        security_violations: 0,
+        tab_switches: 0
+    };
+
+    emailjs.send(emailConfig.serviceId, emailConfig.templateId, templateParams)
+        .then(() => {
+            const loading = document.getElementById('startEmailLoading');
+            if (loading) loading.remove();
+            console.log('Test start notification sent successfully');
+        })
+        .catch((error) => {
+            const loading = document.getElementById('startEmailLoading');
+            if (loading) loading.remove();
+            console.error('Failed to send start notification:', error);
+        });
+}
+
 function sendEmail(resultsData, isAutoSubmit) {
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'loading';
@@ -663,7 +711,7 @@ function sendEmail(resultsData, isAutoSubmit) {
     const templateParams = {
         user_name: emailConfig.name,
         user_email: emailConfig.email,
-        subject_taken: resultsData.subjects,
+        subject_taken: `${resultsData.subjects} - Session: ${sessionCode}`,
         score: resultsData.score,
         total_questions: resultsData.total,
         correct_answers: resultsData.correctList,
@@ -716,6 +764,7 @@ function submitAnswers(isAutoSubmit = false) {
     resultsDiv.innerHTML = `
         <h2>${isAutoSubmit ? '⏰ Time Elapsed - Auto Submitted!' : '✅ Test Submitted Successfully!'}</h2>
         <h3>Your Score: ${score} / ${quizQuestions.length} (${Math.round((score/quizQuestions.length)*100)}%)</h3>
+        <p><strong>Session Code:</strong> ${sessionCode}</p>
         <p><strong>Time Taken:</strong> ${formatTime(timeTaken)} ${isAutoSubmit ? '(Full 10 minutes)' : ''}</p>
         <p><strong>Subject(s):</strong> ${selectedSubjects.join(', ')}</p>
         <p><strong>Security Violations:</strong> ${violations}</p>
@@ -757,6 +806,7 @@ function submitAnswers(isAutoSubmit = false) {
     
     document.getElementById('violationBadge').classList.add('hidden');
     document.getElementById('fullscreenBtn').classList.add('hidden');
+    document.getElementById('sessionCodeBadge').classList.add('hidden');
 }
 
 document.getElementById('subjectForm').addEventListener('submit', function(e) {
@@ -767,6 +817,14 @@ document.getElementById('subjectForm').addEventListener('submit', function(e) {
         alert("⚠️ Please select at least one subject.");
         return;
     }
+
+    // Generate unique session code
+    sessionCode = generateSessionCode();
+    
+    // Display session code
+    const sessionBadge = document.getElementById('sessionCodeBadge');
+    sessionBadge.textContent = `📋 Code: ${sessionCode}`;
+    sessionBadge.classList.remove('hidden');
 
     selectedSubjects = checkedSubjects;
     let selectedPool = [];
@@ -810,6 +868,9 @@ document.getElementById('subjectForm').addEventListener('submit', function(e) {
     testActive = true;
     startTime = Date.now();
     startTimer();
+    
+    // Send test start notification
+    sendTestStartEmail();
     
     // Suggest fullscreen
     setTimeout(() => {
