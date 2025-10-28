@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WAEC Practice Test</title>
+<title>WAEC Practice Test - Secure Mode</title>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; user-select: none; }
     h1 { text-align: center; }
     .subject-select, .quiz, .result { margin-bottom: 20px; }
     .question { margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
-    .options label { display: block; margin: 5px 0; }
+    .options label { display: block; margin: 5px 0; cursor: pointer; }
     button { padding: 10px 20px; font-size: 16px; margin-top: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
     button:hover { background: #0056b3; }
     button:disabled { background: #ccc; cursor: not-allowed; }
@@ -20,44 +20,114 @@
     .timer.warning { background: #ff9800; color: white; }
     .timer.danger { background: #f44336; color: white; animation: pulse 1s infinite; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-    .email-setup { background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107; }
-    .email-setup input { padding: 8px; margin: 5px 0; width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 4px; }
     .hidden { display: none; }
     .loading { text-align: center; padding: 20px; }
     .loading::after { content: '...'; animation: dots 1.5s steps(4, end) infinite; }
     @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
+    
+    /* Rules Screen */
+    .rules-screen { background: white; padding: 30px; border-radius: 10px; max-width: 800px; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+    .rules-screen h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    .rules-screen ul { line-height: 1.8; }
+    .rules-screen li { margin-bottom: 10px; }
+    .rules-screen .warning { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }
+    .rules-screen .security-info { background: #d1ecf1; padding: 15px; border-left: 4px solid #0dcaf0; margin: 20px 0; }
+    .checkbox-agreement { margin: 20px 0; font-size: 16px; }
+    .checkbox-agreement input { margin-right: 10px; transform: scale(1.2); }
+    
+    /* Security Warning */
+    .security-warning { position: fixed; top: 0; left: 0; right: 0; background: #dc3545; color: white; padding: 15px; text-align: center; font-weight: bold; z-index: 2000; animation: slideDown 0.3s; }
+    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+    
+    /* Violation Log */
+    .violation-badge { position: fixed; top: 70px; right: 20px; background: #dc3545; color: white; padding: 10px 15px; border-radius: 8px; font-size: 14px; z-index: 1000; }
+    
+    /* Fullscreen Button */
+    .fullscreen-btn { position: fixed; bottom: 20px; right: 20px; background: #28a745; color: white; padding: 10px 20px; border-radius: 50px; cursor: pointer; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    .fullscreen-btn:hover { background: #218838; }
 </style>
 </head>
 <body>
 
-<h1>WAEC Practice Test</h1>
+<h1>🎓 WAEC Practice Test - Secure Mode</h1>
 
-<div class="email-setup" id="emailSetup">
-    <h3>📧 Email Setup</h3>
-    <p>Enter your email to receive test results:</p>
-    <input type="email" id="userEmail" placeholder="your.email@example.com" required>
-    <br>
-    <button onclick="saveEmailConfig()">Save Email & Start</button>
+<!-- Rules and Regulations Screen -->
+<div class="rules-screen" id="rulesScreen">
+    <h2>📋 Test Rules and Regulations</h2>
+    
+    <h3>📚 Test Information:</h3>
+    <ul>
+        <li><strong>Duration:</strong> 10 minutes (600 seconds)</li>
+        <li><strong>Questions:</strong> Up to 30 questions (depending on subjects selected)</li>
+        <li><strong>Question Types:</strong> Multiple choice</li>
+        <li><strong>Submission:</strong> Automatic submission when time expires or manual submission</li>
+        <li><strong>Results:</strong> Sent automatically to registered email</li>
+    </ul>
+    
+    <div class="security-info">
+        <h3>🔒 Security Features Active:</h3>
+        <ul>
+            <li>✓ Tab switching detection</li>
+            <li>✓ Copy-paste prevention</li>
+            <li>✓ Right-click disabled</li>
+            <li>✓ Fullscreen mode recommended</li>
+            <li>✓ Activity monitoring enabled</li>
+        </ul>
+    </div>
+    
+    <h3>⚠️ Important Rules:</h3>
+    <ul>
+        <li>Do not switch tabs or minimize the browser - violations will be logged</li>
+        <li>Do not attempt to copy or paste content</li>
+        <li>Answer all questions to the best of your ability</li>
+        <li>You can change answers before submitting</li>
+        <li>Timer cannot be paused once started</li>
+        <li>Review your answers before final submission</li>
+        <li>Fullscreen mode is highly recommended for better focus</li>
+    </ul>
+    
+    <div class="warning">
+        <strong>⚠️ Warning:</strong> Multiple security violations may result in automatic test submission or invalidation of results. Stay focused on the test window at all times.
+    </div>
+    
+    <h3>📊 Scoring:</h3>
+    <ul>
+        <li>Each correct answer: 1 point</li>
+        <li>Wrong answers: 0 points (no negative marking)</li>
+        <li>Unanswered questions: 0 points</li>
+    </ul>
+    
+    <div class="checkbox-agreement">
+        <label>
+            <input type="checkbox" id="agreeCheckbox">
+            I have read and understood all the rules and regulations. I agree to abide by them during the test.
+        </label>
+    </div>
+    
+    <button id="proceedBtn" disabled>Proceed to Subject Selection</button>
 </div>
 
-<div class="subject-select" id="subjectSelect">
+<!-- Subject Selection -->
+<div class="subject-select hidden" id="subjectSelect">
     <h2>Select Subjects to Practice</h2>
     <form id="subjectForm">
-        <label><input type="checkbox" name="subject" value="Math"> Math</label>
-        <label><input type="checkbox" name="subject" value="English"> English</label>
+        <label><input type="checkbox" name="subject" value="Math"> Mathematics</label>
+        <label><input type="checkbox" name="subject" value="English"> English Language</label>
         <label><input type="checkbox" name="subject" value="Yoruba"> Yoruba</label>
-        <label><input type="checkbox" name="subject" value="Civic"> Civic</label>
+        <label><input type="checkbox" name="subject" value="Civic"> Civic Education</label>
         <label><input type="checkbox" name="subject" value="Economics"> Economics</label>
         <label><input type="checkbox" name="subject" value="Government"> Government</label>
-        <label><input type="checkbox" name="subject" value="Computer"> Computer</label>
+        <label><input type="checkbox" name="subject" value="Computer"> Computer Studies</label>
         <label><input type="checkbox" name="subject" value="Biology"> Biology</label>
-        <label><input type="checkbox" name="subject" value="Literature"> Literature</label>
+        <label><input type="checkbox" name="subject" value="Literature"> Literature in English</label>
         <br>
-        <button type="submit">Start Quiz (10 Minutes)</button>
+        <button type="submit">🚀 Start Test (10 Minutes)</button>
     </form>
 </div>
 
 <div id="timerDisplay" class="timer hidden">10:00</div>
+<div id="violationBadge" class="violation-badge hidden">⚠️ Violations: 0</div>
+<div id="fullscreenBtn" class="fullscreen-btn hidden" onclick="enterFullscreen()">🖥️ Fullscreen</div>
 <div id="quiz" class="quiz"></div>
 <div id="results" class="result"></div>
 
@@ -410,6 +480,7 @@ const subjects = {
   { q: "What is deregulation?", options: ["More government control", "Removal of government regulations", "New regulations", "International regulation"], answer: "Removal of government regulations" },
   { q: "What is austerity measure?", options: ["Increased spending", "Reduction in government spending", "Economic boom", "Tax reduction"], answer: "Reduction in government spending" }
 ],
+
     Computer: [
         { q: "HTML stands for?", options: ["Hyper Text Markup Language","High Text Machine Language","Hyperlink Markup Language","Home Tool Markup Language"], answer: "Hyper Text Markup Language" },
         { q: "CPU stands for?", options: ["Central Processing Unit","Central Print Unit","Computer Processing Unit","Central Program Unit"], answer: "Central Processing Unit" },
@@ -434,45 +505,121 @@ const subjects = {
 };
 
 let timerInterval;
-let timeRemaining = 600; // 10 minutes in seconds
+let timeRemaining = 600;
 let quizQuestions = [];
 let selectedSubjects = [];
 let startTime;
-let emailConfig = {
+let violations = 0;
+let tabSwitches = 0;
+let testActive = false;
+
+const emailConfig = {
     publicKey: 'Yz16g8qPG_-f9ArRT',
     serviceId: 'service_bt2q0z7',
-    templateId: 'template_l38ppck'
+    templateId: 'template_l38ppck',
+    name: 'Taonuga',
+    email: 'taonuga@gmail.com'
 };
 
-// Initialize EmailJS with public key
-emailjs.init('Yz16g8qPG_-f9ArRT');
+emailjs.init(emailConfig.publicKey);
+
+// Security: Prevent right-click
+document.addEventListener('contextmenu', e => {
+    if (testActive) {
+        e.preventDefault();
+        showSecurityWarning('Right-click is disabled during the test');
+    }
+});
+
+// Security: Prevent copy
+document.addEventListener('copy', e => {
+    if (testActive) {
+        e.preventDefault();
+        logViolation('copy');
+        showSecurityWarning('Copying is not allowed during the test');
+    }
+});
+
+// Security: Prevent paste
+document.addEventListener('paste', e => {
+    if (testActive) {
+        e.preventDefault();
+        logViolation('paste');
+        showSecurityWarning('Pasting is not allowed during the test');
+    }
+});
+
+// Security: Detect tab switching
+document.addEventListener('visibilitychange', () => {
+    if (testActive && document.hidden) {
+        tabSwitches++;
+        logViolation('tab-switch');
+        showSecurityWarning(`⚠️ Warning: Tab switching detected! (${tabSwitches} time${tabSwitches > 1 ? 's' : ''})`);
+        
+        if (tabSwitches >= 5) {
+            alert('Too many tab switches detected. Test will be submitted automatically.');
+            autoSubmit();
+        }
+    }
+});
+
+// Security: Detect window blur (switching to other applications)
+window.addEventListener('blur', () => {
+    if (testActive) {
+        logViolation('window-blur');
+        showSecurityWarning('⚠️ Warning: Focus lost. Stay on the test window!');
+    }
+});
+
+function showSecurityWarning(message) {
+    const existing = document.querySelector('.security-warning');
+    if (existing) existing.remove();
+    
+    const warning = document.createElement('div');
+    warning.className = 'security-warning';
+    warning.textContent = message;
+    document.body.prepend(warning);
+    
+    setTimeout(() => warning.remove(), 4000);
+}
+
+function logViolation(type) {
+    violations++;
+    const badge = document.getElementById('violationBadge');
+    badge.textContent = `⚠️ Violations: ${violations}`;
+    console.log(`Security violation: ${type} at ${new Date().toISOString()}`);
+}
+
+function enterFullscreen() {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+    }
+}
+
+// Rules screen agreement
+document.getElementById('agreeCheckbox').addEventListener('change', function() {
+    document.getElementById('proceedBtn').disabled = !this.checked;
+});
+
+document.getElementById('proceedBtn').addEventListener('click', function() {
+    document.getElementById('rulesScreen').classList.add('hidden');
+    document.getElementById('subjectSelect').classList.remove('hidden');
+});
 
 function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
 }
 
-function saveEmailConfig() {
-    const email = document.getElementById('userEmail').value;
-
-    if (!email) {
-        alert('Please enter your email address!');
-        return;
-    }
-
-    if (!email.includes('@')) {
-        alert('Please enter a valid email address!');
-        return;
-    }
-
-    emailConfig.email = email;
-    
-    document.getElementById('emailSetup').style.display = 'none';
-    alert('Email saved! You can now start the quiz.');
-}
-
 function startTimer() {
     const timerDisplay = document.getElementById('timerDisplay');
     timerDisplay.classList.remove('hidden');
+    document.getElementById('violationBadge').classList.remove('hidden');
+    document.getElementById('fullscreenBtn').classList.remove('hidden');
     
     timerInterval = setInterval(() => {
         timeRemaining--;
@@ -514,6 +661,7 @@ function sendEmail(resultsData, isAutoSubmit) {
     document.getElementById('results').prepend(loadingDiv);
 
     const templateParams = {
+        user_name: emailConfig.name,
         user_email: emailConfig.email,
         subject_taken: resultsData.subjects,
         score: resultsData.score,
@@ -522,7 +670,9 @@ function sendEmail(resultsData, isAutoSubmit) {
         wrong_answers: resultsData.wrongList,
         unanswered: resultsData.unansweredList,
         time_taken: resultsData.timeTaken,
-        submission_type: isAutoSubmit ? 'Auto-submitted (Time Elapsed)' : 'Manual Submission'
+        submission_type: isAutoSubmit ? 'Auto-submitted (Time Elapsed)' : 'Manual Submission',
+        security_violations: violations,
+        tab_switches: tabSwitches
     };
 
     emailjs.send(emailConfig.serviceId, emailConfig.templateId, templateParams)
@@ -532,12 +682,13 @@ function sendEmail(resultsData, isAutoSubmit) {
         })
         .catch((error) => {
             loadingDiv.remove();
-            alert('❌ Failed to send email. Error: ' + error.text);
+            alert('❌ Failed to send email. Error: ' + (error.text || error));
             console.error('EmailJS error:', error);
         });
 }
 
 function submitAnswers(isAutoSubmit = false) {
+    testActive = false;
     clearInterval(timerInterval);
     
     const timeTaken = 600 - timeRemaining;
@@ -562,12 +713,14 @@ function submitAnswers(isAutoSubmit = false) {
         }
     });
 
-    // Display results
     resultsDiv.innerHTML = `
         <h2>${isAutoSubmit ? '⏰ Time Elapsed - Auto Submitted!' : '✅ Test Submitted Successfully!'}</h2>
-        <h3>Your Score: ${score} / ${quizQuestions.length}</h3>
+        <h3>Your Score: ${score} / ${quizQuestions.length} (${Math.round((score/quizQuestions.length)*100)}%)</h3>
         <p><strong>Time Taken:</strong> ${formatTime(timeTaken)} ${isAutoSubmit ? '(Full 10 minutes)' : ''}</p>
         <p><strong>Subject(s):</strong> ${selectedSubjects.join(', ')}</p>
+        <p><strong>Security Violations:</strong> ${violations}</p>
+        <p><strong>Tab Switches:</strong> ${tabSwitches}</p>
+        <hr>
     `;
 
     quizQuestions.forEach((q, idx) => {
@@ -586,7 +739,6 @@ function submitAnswers(isAutoSubmit = false) {
         resultsDiv.appendChild(resultLine);
     });
 
-    // Prepare email data
     const resultsData = {
         subjects: selectedSubjects.join(', '),
         score: score,
@@ -599,22 +751,20 @@ function submitAnswers(isAutoSubmit = false) {
 
     sendEmail(resultsData, isAutoSubmit);
 
-    // Disable all inputs
     document.querySelectorAll('input[type="radio"]').forEach(input => input.disabled = true);
-    document.querySelector('#quiz button').disabled = true;
+    const submitBtn = document.querySelector('#quiz button');
+    if (submitBtn) submitBtn.disabled = true;
+    
+    document.getElementById('violationBadge').classList.add('hidden');
+    document.getElementById('fullscreenBtn').classList.add('hidden');
 }
 
 document.getElementById('subjectForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    if (!emailConfig.email) {
-        alert('Please configure your email first!');
-        return;
-    }
-    
     const checkedSubjects = Array.from(document.querySelectorAll('input[name="subject"]:checked')).map(el => el.value);
     if (checkedSubjects.length === 0) {
-        alert("Please select at least one subject.");
+        alert("⚠️ Please select at least one subject.");
         return;
     }
 
@@ -649,12 +799,24 @@ document.getElementById('subjectForm').addEventListener('submit', function(e) {
     });
 
     const submitBtn = document.createElement('button');
-    submitBtn.textContent = "Submit Answers";
-    submitBtn.addEventListener('click', () => submitAnswers(false));
+    submitBtn.textContent = "📝 Submit Answers";
+    submitBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to submit? You cannot change answers after submission.')) {
+            submitAnswers(false);
+        }
+    });
     quizDiv.appendChild(submitBtn);
 
+    testActive = true;
     startTime = Date.now();
     startTimer();
+    
+    // Suggest fullscreen
+    setTimeout(() => {
+        if (confirm('Would you like to enter fullscreen mode for better focus?')) {
+            enterFullscreen();
+        }
+    }, 500);
 });
 </script>
 
